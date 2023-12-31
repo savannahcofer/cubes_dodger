@@ -1,6 +1,6 @@
 # Pygame Cube Runner Game
 
-![Game Preview](game_preview.png)
+![Game Preview](preveiw/Screenshot.png)
 
 This Python script (`cube_game.py`) uses the Pygame library to create a simple cube runner game. The player controls a cube character that must navigate through obstacles while collecting points.
 
@@ -42,9 +42,6 @@ This Python script (`cube_game.py`) uses the Pygame library to create a simple c
 
 - You can customize various aspects of the game, such as the number of obstacles, obstacle properties (size, speed, color), and more by modifying the `cube_game.py` script.
 
-## Screenshots
-
-Include screenshots or GIFs of your game to give users a visual preview.
 
 ## Contributing
 
@@ -52,4 +49,4 @@ If you have suggestions or find issues with the game, feel free to open an issue
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License
