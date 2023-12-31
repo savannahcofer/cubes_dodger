@@ -4,7 +4,7 @@
 
 This Python script (`cube_game.py`) uses the Pygame library to create a simple cube runner game. The player controls a cube character that must navigate through obstacles while collecting points.
 
-![Game Preview](preveiw/Screenshot.png)
+![Game Preview](preview/Screenshot.png)
 
 ## Features
 
