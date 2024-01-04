@@ -17,9 +17,10 @@ This Python script (`cube_game.py`) uses the Pygame library to create a simple c
 
 1. **Install Dependencies:**
    - Make sure you have Python installed on your machine.
-   - Install the Pygame library using the following command:
+   - Install the Pygame library and colour using the following commands:
      ```bash
      pip install pygame
+     pip install colour
      ```
 
 2. **Run the Game:**
