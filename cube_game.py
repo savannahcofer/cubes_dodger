@@ -1,14 +1,13 @@
 import sys
-
 import pygame
 import colour
 import random
 
-sizeOfWindow = [2000, 1500]
+sizeOfWindow = [1000, 750]
 pygame.init()
 win = pygame.display.set_mode(sizeOfWindow)
 
-countOfEnemy = 20
+countOfEnemy = 5
 randomSpead = True
 randomColor = True
 infinity = True
@@ -30,6 +29,9 @@ quitR = None
 iForWave = 0
 startingTime = False
 endFlagStartingTime = False
+death_time = 0
+is_dying = False
+death_count = 0
 
 
 class ManagementGame:
@@ -46,14 +48,14 @@ class ManagementGame:
 
     @staticmethod
     def gameOver():
-        global gameOver
-        gameOver = True
+        global death_time, is_dying, death_count
+        is_dying = True
+        death_time = pygame.time.get_ticks()
+        player.color = (255, 0, 0)
+        death_count += 1
         pygame.display.update()
-        global running
-        running = False
         ManagementGame.claerEnemy()
         print('hi')
-        global player
 
     @staticmethod
     def showTitle(score):
@@ -61,7 +63,9 @@ class ManagementGame:
         textScore = pygame.font.Font(None, 80)
         win.blit(textScore.render(f"Score: {score}", False, (255, 255, 255)), (0, 0))
         textScore = pygame.font.Font(None, 60)
-        win.blit(textScore.render(f"wave: {wave}", False, (255, 0, 255)), (0, 60))
+        win.blit(textScore.render(f"Wave: {wave}", False, (0, 0, 255)), (0, 60))
+        textDeaths = pygame.font.Font(None, 60)
+        win.blit(textDeaths.render(f"Deaths: {death_count}", False, (255, 0, 0)), (0, 120))
         if gameOver:
             ManagementGame.GameOverTitle()
 
@@ -159,9 +163,22 @@ class ManagementGame:
 
     @staticmethod
     def intoWhile():
+        global is_dying, death_time
+        
         ManagementGame.showTitle(score)
         ManagementGame.manageWave()
-        keys = pygame.key.get_pressed()  # checking pressed keys
+        
+        if is_dying:
+            current_time = pygame.time.get_ticks()
+            if current_time - death_time >= 500:
+                is_dying = False
+                player.color = (255, 255, 255)
+                player.x = 940
+                player.y = 1100
+                ManagementGame.claerEnemy()
+
+        pygame.time.delay(10)
+        keys = pygame.key.get_pressed()
         if keys[pygame.K_UP]:
             player.moveY(False)
         if keys[pygame.K_DOWN]:
@@ -173,14 +190,15 @@ class ManagementGame:
 
         ManagementGame.checkPlayer()
         player.show()
+        
         if running:
             if generateEnemy:
                 if len(enemiesList) < countOfEnemy:
                     Rect()
-
             for item in enemiesList:
                 item.moveY()
                 item.check()
+                
         pygame.display.update()
         win.fill(backgroundColor)
 
@@ -234,9 +252,10 @@ class Rect:
     randPositionX = None
     randSpead = None
     randBorder = None
+    is_player = None
 
     def __init__(self, w=0, h=0, x=0, y=0, color="white", randColor=True, randSize=True, randPositionX=True,
-                 randSpead=True, spead=5,
+                 randSpead=True, spead=1,
                  border=5, append=True, randBorder=True):
         self.randColor = randColor
         self.x = x
@@ -252,6 +271,7 @@ class Rect:
         self.randBorder = randBorder
         self.random()
         self.show()
+        self.is_player = not append
 
         if append:
             enemiesList.append(self)
@@ -277,7 +297,7 @@ class Rect:
         if self.randPositionX:
             self.x = random.randint(0, sizeOfWindow[0])
         if self.randSpead:
-            self.spead = random.randint(1, 10)
+            self.spead = random.randint(1, 4)
         if self.randBorder:
             if random.randint(0, 1):
                 self.border = random.randint(4, 15)
@@ -298,10 +318,12 @@ class Rect:
         pygame.draw.rect(win, self.color, ((self.x, self.y), (self.w, self.h)), self.border)
 
     def destroyer(self):
-        if self.y > (sizeOfWindow[1] + 200):
-            enemiesList.remove(self)
-            global score
-            score += 1
+        if not self.is_player:
+            if self.y > (sizeOfWindow[1] + 200):
+                if self in enemiesList:
+                    enemiesList.remove(self)
+                    global score
+                    score += 1
 
     def check(self):
         if (self.x < player.x < self.x + self.w) or (player.x < self.x < player.x + player.w) or (player.x == self.x):
@@ -317,4 +339,3 @@ while True:
     for item in events:
         if item.type == pygame.QUIT:
             pygame.quit()
-            pygame.sys.exit()
