@@ -1,6 +1,14 @@
-# Pygame Cube Runner Game
+# Pygame Cube Runner Game - IMU Controlled
 
+This is an IMU pointer controlled version of the open source cube game by lioil987.
 
+The file bleak_eval_client receives IMU data over UART including accelerometer, gyroscope, and magnetometer data.
+
+When the player dies, the Bluetooth of the computer sends a command to the UART BLE peripheral to trigger an action - in our device, this is a light that turns red and a haptic feedback.
+
+The speed and frequency of obstacles are adjusted for IMU control, and the gameplay is continuous when an obstacle is encountered.
+
+Game description by lioil987 as follows:
 
 This Python script (`cube_game.py`) uses the Pygame library to create a simple cube runner game. The player controls a cube character that must navigate through obstacles while collecting points.
 
