@@ -2,10 +2,14 @@ import sys
 import pygame
 import colour
 import random
+import asyncio
+from bleak_eval_client import BleakEvalClient  # Import the client
 
 sizeOfWindow = [1000, 750]
 pygame.init()
 win = pygame.display.set_mode(sizeOfWindow)
+# Initialize BLE client (move this to be just a declaration)
+bleak_client = None  # Will be initialized in main()
 
 countOfEnemy = 5
 randomSpead = True
@@ -32,30 +36,37 @@ endFlagStartingTime = False
 death_time = 0
 is_dying = False
 death_count = 0
+in_intro = True
+game_started = False
 
 
 class ManagementGame:
     @staticmethod
     def init():
-        global playAgainR
-        global quitR
-        global player
-        player = Rect(100, 100, 1000, 1300, "white", False, False, False, False, 8, 0, False, False)
-        for num in range(countOfEnemy + 1):
-            Rect
+        global playAgainR, quitR, player
+        player = Rect(100, 100, sizeOfWindow[0]//2 - 50, sizeOfWindow[1] - 150, "white", False, False, False, False, 8, 0, False, False)
         playAgainR = Rect(300, 200, 1450, 1000, "white", False, False, False, False, 0, 5, False, False)
         quitR = Rect(300, 200, 250, 1000, "white", False, False, False, False, 0, 5, False, False)
 
     @staticmethod
-    def gameOver():
-        global death_time, is_dying, death_count
+    async def gameOver(): # if you get hit
+        global death_time, is_dying, death_count, bleak_client
         is_dying = True
         death_time = pygame.time.get_ticks()
         player.color = (255, 0, 0)
-        death_count += 1
+        death_count += 1 # increase the death count
+        
+        # Try to send bluetooth message if client exists
+        try:
+            if bleak_client:
+                print('sent a message that we died')
+                await bleak_client.send_message("Died")
+        except Exception as e:
+            print(f"Bluetooth communication failed: {e}")
+        
         pygame.display.update()
         ManagementGame.claerEnemy()
-        print('hi')
+        print('you just died')
 
     @staticmethod
     def showTitle(score):
@@ -116,8 +127,8 @@ class ManagementGame:
     @staticmethod
     def claerEnemy():
         enemiesList.clear()
-        player.x = 940
-        player.y = 1100
+        player.x = sizeOfWindow[0]//2 - 50
+        player.y = sizeOfWindow[1] - 150
 
     @staticmethod
     def manageWave():
@@ -162,22 +173,43 @@ class ManagementGame:
         return False
 
     @staticmethod
-    def intoWhile():
+    def showSensorData(bleak_client):
+        try:
+            # Create font object (do this once at initialization if possible)
+            font = pygame.font.Font(None, 24)
+            
+            # Format sensor data strings
+            gyro_text = f"Gyro: {bleak_client.gyro_x:.2f}, {bleak_client.gyro_y:.2f}, {bleak_client.gyro_z:.2f}"
+
+            
+            # Render text
+            gyro_surface = font.render(gyro_text, True, (255, 255, 255))
+
+            # Position text in upper right corner
+            win.blit(gyro_surface, (sizeOfWindow[0] - gyro_surface.get_width() - 10, 30))
+        except Exception as e:
+            pass  # Silently fail if sensor data isn't available
+
+    @staticmethod
+    async def intoWhile():
         global is_dying, death_time
         
         ManagementGame.showTitle(score)
         ManagementGame.manageWave()
+        
+        ManagementGame.showSensorData(bleak_client)
         
         if is_dying:
             current_time = pygame.time.get_ticks()
             if current_time - death_time >= 500:
                 is_dying = False
                 player.color = (255, 255, 255)
-                player.x = 940
-                player.y = 1100
+                player.x = sizeOfWindow[0]//2 - 50
+                player.y = sizeOfWindow[1] - 150
                 ManagementGame.claerEnemy()
-
-        pygame.time.delay(10)
+        
+        # use delay to control the speeds, you can use arrows or gyro
+        pygame.time.delay(5)
         keys = pygame.key.get_pressed()
         if keys[pygame.K_UP]:
             player.moveY(False)
@@ -187,6 +219,54 @@ class ManagementGame:
             player.moveX(False)
         if keys[pygame.K_RIGHT]:
             player.moveX()
+        # end if
+
+        # Handle gyroscope input
+        try:
+            # Get gyroscope data from bleak_eval_client
+            # Assuming gyro_x and gyro_y are the pitch and roll angles
+            gyro_x = bleak_client.gyro_x  # You'll need to adjust this based on your actual data structure
+            gyro_y = bleak_client.gyro_y
+
+            # Define threshold angles for movement
+            threshold = 0.1  # Adjust this value to change sensitivity
+
+            # Move based on gyroscope angles
+            if gyro_x > threshold:
+                player.moveY()  # Move down
+            elif gyro_x < -threshold:
+                player.moveY(False)  # Move up
+
+            if gyro_y > threshold:
+                player.moveX()  # Move right
+            elif gyro_y < -threshold:
+                player.moveX(False)  # Move left
+        except:
+            # If gyroscope data isn't available, continue with just keyboard controls
+            pass
+            # Handle gyroscope input
+            try:
+                # Get gyroscope data from bleak_eval_client
+                # Assuming gyro_x and gyro_y are the pitch and roll angles
+                gyro_x = bleak_client.gyro_x  # You'll need to adjust this based on your actual data structure
+                gyro_y = bleak_client.gyro_y
+
+                # Define threshold angles for movement
+                threshold = 10  # Adjust this value to change sensitivity
+
+                # Move based on gyroscope angles
+                if gyro_x > threshold:
+                    player.moveY()  # Move down
+                elif gyro_x < -threshold:
+                    player.moveY(False)  # Move up
+
+                if gyro_y > threshold:
+                    player.moveX()  # Move right
+                elif gyro_y < -threshold:
+                    player.moveX(False)  # Move left
+            except:
+                # If gyroscope data isn't available, continue with just keyboard controls
+                pass
 
         ManagementGame.checkPlayer()
         player.show()
@@ -197,7 +277,7 @@ class ManagementGame:
                     Rect()
             for item in enemiesList:
                 item.moveY()
-                item.check()
+                await item.check()
                 
         pygame.display.update()
         win.fill(backgroundColor)
@@ -213,6 +293,24 @@ class ManagementGame:
             player.y = 0
         if player.y + player.h > sizeOfWindow[1]:
             player.y = sizeOfWindow[1] - player.h
+
+    @staticmethod
+    def show_intro_screen():
+        win.fill(backgroundColor)
+        title_font = pygame.font.Font(None, 150)
+        subtitle_font = pygame.font.Font(None, 80)
+        
+        # Draw title
+        title_text = title_font.render("CUBE GAME", False, (255, 255, 255))
+        title_rect = title_text.get_rect(center=(sizeOfWindow[0] // 2, sizeOfWindow[1] // 2 - 100))
+        win.blit(title_text, title_rect)
+        
+        # Draw "Press SPACE to start" message
+        start_text = subtitle_font.render("Press SPACE to start", False, (255, 255, 255))
+        start_rect = start_text.get_rect(center=(sizeOfWindow[0] // 2, sizeOfWindow[1] // 2 + 100))
+        win.blit(start_text, start_rect)
+        
+        pygame.display.update()
 
 
 class Color:
@@ -325,17 +423,61 @@ class Rect:
                     global score
                     score += 1
 
-    def check(self):
+    async def check(self):
         if (self.x < player.x < self.x + self.w) or (player.x < self.x < player.x + player.w) or (player.x == self.x):
             if (self.y < player.y < self.y + self.h) or (player.y < self.y < player.y + player.h):
-                ManagementGame.gameOver()
+                await ManagementGame.gameOver()
 
 
-ManagementGame.init()
+async def main():
+    global in_intro, game_started, bleak_client
 
-while True:
-    ManagementGame.intoWhile()
-    events = pygame.event.get()
-    for item in events:
-        if item.type == pygame.QUIT:
-            pygame.quit()
+    # Initialize BLE client once at startup
+    try:
+        bleak_client = BleakEvalClient()
+        connected = await bleak_client.connect()
+        if connected:
+            print("Successfully connected to Bluetooth device")
+        else:
+            print("Could not connect to Bluetooth device - continuing without BLE")
+    except Exception as e:
+        print(f"Bluetooth initialization failed: {e}")
+        bleak_client = None
+
+    try:
+        while True:
+            if in_intro:
+                ManagementGame.show_intro_screen()
+                events = pygame.event.get()
+                for event in events:
+                    if event.type == pygame.QUIT:
+                        raise SystemExit
+                    if event.type == pygame.KEYDOWN:
+                        if event.key == pygame.K_SPACE:
+                            in_intro = False
+                            game_started = True
+                            ManagementGame.init()
+            else:
+                await ManagementGame.intoWhile()
+                events = pygame.event.get()
+                for item in events:
+                    if item.type == pygame.QUIT:
+                        raise SystemExit
+            
+            await asyncio.sleep(0.01)
+    finally:
+        # Clean up Bluetooth connection when exiting
+        try:
+            if bleak_client:
+                await bleak_client.disconnect()
+        except:
+            pass
+        pygame.quit()
+        sys.exit()
+
+if __name__ == "__main__":
+    try:
+        asyncio.run(main())
+    except (KeyboardInterrupt, SystemExit):
+        pygame.quit()
+        sys.exit()
