@@ -8,7 +8,7 @@ When the player dies, the Bluetooth of the computer sends a command to the UART 
 
 The speed and frequency of obstacles are adjusted for IMU control, and the gameplay is continuous when an obstacle is encountered.
 
-Game description by lioil987 as follows:
+## Game description by lioil987 as follows:
 
 This Python script (`cube_game.py`) uses the Pygame library to create a simple cube runner game. The player controls a cube character that must navigate through obstacles while collecting points.
 
